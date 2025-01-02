@@ -17,12 +17,17 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from users.views import VerifyOTPView, LoginView, LogoutView, RegisterView
+from fileManagement.views import FileUploadView, FileDownloadView, GenerateSecureLinkView, SecureFileDownloadView
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('register-user/', RegisterView.as_view(), name='register_user'),
-    path('verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
-    path('login/', LoginView.as_view(), name='login'),
-    path('logout/', LogoutView.as_view(), name='logout'),
+    path('user/register/', RegisterView.as_view(), name='register_user'),
+    path('user/verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
+    path('user/login/', LoginView.as_view(), name='login'),
+    path('user/logout/', LogoutView.as_view(), name='logout'),
+    path('file/upload/', FileUploadView.as_view(), name='file_upload'),
+    path('file/download/<int:file_id>/', FileDownloadView.as_view(), name='file_download'),
+    path('secure-link/<int:file_id>/', GenerateSecureLinkView.as_view(), name='generate_secure_link'),
+    path('download/<int:file_id>/<int:expiration_time>/<str:signature>/', SecureFileDownloadView.as_view(), name='secure_file_download'),
 ]
