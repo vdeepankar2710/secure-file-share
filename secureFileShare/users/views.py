@@ -1,72 +1,116 @@
-from django.core.mail import send_mail
-from django.utils.timezone import now
+from django.utils.timezone import now 
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-import jwt
-from django.conf import settings
+from django.core.mail import send_mail
 from .models import User
-
+from rest_framework.authtoken.models import Token
+from .serializers import UserSerializer
+from .utils.password_hash import PasswordHasher
 
 class RegisterView(APIView):
     """Register a new user."""
-
+    
     def post(self, request):
         email = request.data.get("email")
-        password = request.data.get("password")
         username = request.data.get("username")
+        password = request.data.get("password")
+        role = request.data.get("role", "GUEST")
+
+        serializer = UserSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         if User.objects.filter(email=email).exists():
-            return Response({"error": "Email already exists."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Email already exists."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        user = User.objects.create_user(username=username, email=email, password=password)
+        try:
+            # Hash password with custom implementation
+            hashed_password = PasswordHasher.hash_password(password)
+            
+            # Create user with hashed password
+            user = User.objects.create(
+                username=username,
+                email=email,
+                password=hashed_password,  # Store custom hash
+                role=role
+            )
+            
+        except Exception as e:
+            return Response(
+                {"message": "Failed creating user"}, 
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
 
-        user.generate_otp()
-        send_mail(
-            "Your OTP for Login",
-            f"Your OTP is {user.otp}. It is valid for 5 minutes.",
-            "noreply@yourapp.com",
-            [email],
-            fail_silently=False,
+        try:
+            user.generate_otp()
+            send_mail(
+                "Your OTP for Login",
+                f"Your OTP is {user.otp}. It is valid for 5 minutes.",
+                "noreply@yourapp.com",
+                [email],
+                fail_silently=False,
+            )
+        except:
+            return Response(
+                {"message": "Failed sending OTP"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response(
+            {"message": "OTP sent to your email."}, 
+            status=status.HTTP_200_OK
         )
-
-        return Response({"message": "OTP sent to your email."}, status=status.HTTP_200_OK)
-
 
 class LoginView(APIView):
     """Authenticate user and generate JWT token."""
-
+    
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
+        role = request.data.get("role", "GUEST")
 
-        # Authenticate the user
-        user = authenticate(request, email=email, password=password)
-        if not user:
-            return Response({"error": "Invalid email or password."}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            user = User.objects.get(email=email, role=role)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Invalid email or role."}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
-        # Generate and send OTP
-        user.generate_otp()
-        # Use an email backend to send the OTP
-        send_mail(
-            "Your OTP for Login",
-            f"Your OTP is {user.otp}. It is valid for 5 minutes.",
-            "noreply@yourapp.com",
-            [email],
-            fail_silently=False,
+        # Verify password using custom implementation
+        if not PasswordHasher.verify_password(password, user.password):
+            return Response(
+                {"error": "Invalid password."}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        try:
+            user.generate_otp()
+            send_mail(
+                "Your OTP for Login",
+                f"Your OTP is {user.otp}. It is valid for 5 minutes.",
+                "noreply@yourapp.com",
+                [email],
+                fail_silently=False,
+            )
+        except:
+            return Response(
+                {"message": "Failed sending OTP"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response(
+            {"message": "OTP sent to your email."}, 
+            status=status.HTTP_200_OK
         )
-
-        return Response({"message": "OTP sent to your email."}, status=status.HTTP_200_OK)
-
 
 class LogoutView(APIView):
     """Logout user by invalidating the token."""
-    permission_classes = [IsAuthenticated]
-
-
     def post(self, request):
         try:
             # Blacklist the token (if token blacklist is used)
@@ -101,5 +145,5 @@ class VerifyOTPView(APIView):
         user.save()
 
         # Generate JWT token
-        token = jwt.encode({"user_id": user.id}, settings.SECRET_KEY, algorithm="HS256")
-        return Response({"message": "Login successful.", "token": token}, status=status.HTTP_200_OK)
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({"message": "Login successful.", "token": token.key}, status=status.HTTP_200_OK)

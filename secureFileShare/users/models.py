@@ -5,11 +5,20 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.timezone import now, timedelta
 
+ADMIN = "ADMIN"
+REGULAR = "REGULAR"
+GUEST = "GUEST"
+
+ROLE_CHOICES = [
+    (ADMIN, "ADMIN"),
+    (REGULAR, "REGULAR"),
+    (GUEST, "GUEST"),
+]
 
 class User(AbstractUser):
     email = models.EmailField(unique=True, blank=False, null=False)
-
-    # Avoid reverse accessor conflicts with related_name
+    
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=GUEST)
     groups = models.ManyToManyField(
         "auth.Group",
         related_name="custom_user_set",  # Custom related_name to avoid conflict

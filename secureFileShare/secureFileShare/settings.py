@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,20 +22,37 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-g0ed56a_g02kic_zw%r%1b8q8ihvkrgjyyvt0*@2qr@#a@k$sa'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = []
 
+CORS_ALLOWED_ORIGINS = [
+    "https://localhost:3000",  # Frontend URL
+    # "https://127.0.0.1:3000/"
+    # "http://localhost:3000",  # Frontend URL
+    # "http://127.0.0.1:3000/"
+]
+
+CORS_ALLOW_METHODS = [
+    "GET",
+    "POST",
+    "PUT",
+    "DELETE",
+    "OPTIONS",
+]
+
+SECRET_KEY = config("SECRET_KEY")
+PASSWORD = config("PASSWORD")
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'abnormalsec2@gmail.com'
-EMAIL_HOST_PASSWORD = 'usmsitnscufqqvas'
+
 
 
 
@@ -49,12 +67,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users',
     'rest_framework_simplejwt.token_blacklist',
-    'fileManagement'
-
+    'fileManagement',
+    'corsheaders',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'django_extensions',
 ]
 
-
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
