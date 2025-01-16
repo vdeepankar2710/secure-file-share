@@ -111,6 +111,13 @@ To bypass the warning in development:
 1. Click "Advanced" or "More Information"
 2. Click "Proceed to localhost (unsafe)" or "Accept the Risk and Continue"
 
+
+## TO run the Dockerized version of the application:
+
+1. Get into the secure-file-share directory (root directory).
+2. Create the image by running the command:  docker build -t secure-file-share .
+3. Run the container by : docker run -p 8000:8000 secure-file-share
+
 ## Troubleshooting
 
 ### Common Issues:
