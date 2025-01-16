@@ -1,39 +1,58 @@
 import os
 import subprocess
+import sys
 
 def flush_data():
     """
     Flushes the database by dropping all tables.
     """
-    os.system("python manage.py flush")
-    print("Data flushed.")
+    print("Starting database flush...")
+    result = os.system("python manage.py flush --noinput")
+    print(f"Data flush completed with status: {result}")
     
 def makemigrations():
     """
     Creates new migration files for changes in models.
     """
-    print("Creating migrations...")
-    os.system("python manage.py makemigrations")
-    print("Migrations created.")
+    print("Starting makemigrations...")
+    result = os.system("python manage.py makemigrations")
+    print(f"Makemigrations completed with status: {result}")
 
 def migrate():
     """
     Applies migrations to the database.
     """
-    print("Applying migrations...")
-    os.system("python manage.py migrate")
-    print("Migrations applied.")
+    print("Starting migrations...")
+    result = os.system("python manage.py migrate")
+    print(f"Migrations completed with status: {result}")
 
 def runserver():
     """
-    Starts the development server.
+    Starts the development server with Docker-specific settings.
     """
     print("Starting development server...")
-    os.system("python manage.py runserver")
-    print("Server started.")
+    print("Current working directory:", os.getcwd())
+    print("Files in current directory:", os.listdir())
+    
+    # Use subprocess to get more detailed output
+    try:
+        subprocess.run([
+            "python", 
+            "manage.py", 
+            "runserver", 
+            "0.0.0.0:8000",
+            "--verbosity=2",
+            "--noreload"  # Disable auto-reload to see clearer logs
+        ], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error starting server: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    flush_data()  # Default to "yes" for flushing data
+    print("Starting run_dev.py")
+    print("Python version:", sys.version)
+    
+    flush_data()
     makemigrations()
     migrate()
     runserver()
